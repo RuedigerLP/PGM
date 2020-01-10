@@ -12,17 +12,15 @@ import org.jdom2.Document;
 import org.jdom2.Element;
 import tc.oc.item.tag.BooleanItemTag;
 import tc.oc.material.MaterialMatcher;
+import tc.oc.pgm.api.map.MapContext;
+import tc.oc.pgm.api.map.MapModule;
+import tc.oc.pgm.api.map.factory.MapModuleFactory;
 import tc.oc.pgm.api.match.Match;
-import tc.oc.pgm.map.MapModule;
-import tc.oc.pgm.map.MapModuleContext;
-import tc.oc.pgm.map.MapModuleFactory;
-import tc.oc.pgm.match.MatchModule;
-import tc.oc.pgm.module.ModuleDescription;
+import tc.oc.pgm.api.match.MatchModule;
 import tc.oc.pgm.util.XMLUtils;
 import tc.oc.xml.InvalidXMLException;
 
-@ModuleDescription(name = "Item Modify")
-public class ItemModifyModule extends MapModule {
+public class ItemModifyModule implements MapModule {
   private static final BooleanItemTag APPLIED = new BooleanItemTag("custom-meta-applied", false);
 
   private final List<ItemRule> rules;
@@ -52,7 +50,7 @@ public class ItemModifyModule extends MapModule {
 
   public static class Factory implements MapModuleFactory<ItemModifyModule> {
     @Override
-    public @Nullable ItemModifyModule parse(MapModuleContext context, Logger logger, Document doc)
+    public @Nullable ItemModifyModule parse(MapContext context, Logger logger, Document doc)
         throws InvalidXMLException {
       List<ItemRule> rules = new ArrayList<>();
       for (Element elRule : XMLUtils.flattenElements(doc.getRootElement(), "item-mods", "rule")) {
@@ -63,7 +61,8 @@ public class ItemModifyModule extends MapModule {
         // those to potion items
         PotionMeta meta = (PotionMeta) Bukkit.getItemFactory().getItemMeta(Material.POTION);
         context
-            .getKitParser()
+            .legacy()
+            .getKits()
             .parseItemMeta(XMLUtils.getRequiredUniqueChild(elRule, "modify"), meta);
 
         ItemRule rule = new ItemRule(items, meta);

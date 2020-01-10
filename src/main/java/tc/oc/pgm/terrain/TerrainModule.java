@@ -1,6 +1,5 @@
 package tc.oc.pgm.terrain;
 
-import java.io.File;
 import java.util.Random;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
@@ -8,16 +7,15 @@ import org.bukkit.generator.ChunkGenerator;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import tc.oc.chunk.NullChunkGenerator;
-import tc.oc.pgm.map.MapModule;
-import tc.oc.pgm.map.MapModuleContext;
-import tc.oc.pgm.map.MapModuleFactory;
-import tc.oc.pgm.module.ModuleDescription;
+import tc.oc.pgm.api.map.MapContext;
+import tc.oc.pgm.api.map.MapModule;
+import tc.oc.pgm.api.map.factory.MapModuleFactory;
+import tc.oc.pgm.api.match.Match;
+import tc.oc.pgm.api.match.MatchModule;
 import tc.oc.pgm.util.XMLUtils;
 import tc.oc.xml.InvalidXMLException;
-import tc.oc.xml.Node;
 
-@ModuleDescription(name = "Terrain")
-public class TerrainModule extends MapModule {
+public class TerrainModule implements MapModule {
 
   private final TerrainOptions options;
 
@@ -37,24 +35,20 @@ public class TerrainModule extends MapModule {
     }
   }
 
-  public File getWorldFolder() {
-    return options.worldFolder;
+  @Override
+  public MatchModule createMatchModule(Match match) {
+    return null;
   }
 
   public static class Factory implements MapModuleFactory<TerrainModule> {
     @Override
-    public TerrainModule parse(MapModuleContext context, Logger logger, Document doc)
+    public TerrainModule parse(MapContext context, Logger logger, Document doc)
         throws InvalidXMLException {
-      File worldFolder = context.getBasePath();
       boolean vanilla = false;
       Long seed = null;
 
       for (Element elTerrain : doc.getRootElement().getChildren("terrain")) {
         vanilla = XMLUtils.parseBoolean(elTerrain.getAttribute("vanilla"), vanilla);
-        worldFolder =
-            XMLUtils.parseRelativeFolder(
-                context.getBasePath(), Node.fromAttr(elTerrain, "world"), worldFolder);
-
         String seedText = elTerrain.getAttributeValue("seed");
         if (seedText != null) {
           try {
@@ -65,7 +59,7 @@ public class TerrainModule extends MapModule {
         }
       }
 
-      return new TerrainModule(new TerrainOptions(worldFolder, vanilla, seed));
+      return new TerrainModule(new TerrainOptions(vanilla, seed));
     }
   }
 }

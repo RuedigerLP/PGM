@@ -10,8 +10,8 @@ import org.bukkit.command.CommandSender;
 import tc.oc.pgm.AllTranslations;
 import tc.oc.pgm.api.Permissions;
 import tc.oc.pgm.api.chat.Audience;
-import tc.oc.pgm.api.match.MatchManager;
-import tc.oc.pgm.map.PGMMap;
+import tc.oc.pgm.api.map.MapInfo;
+import tc.oc.pgm.rotation.MapOrder;
 import tc.oc.pgm.rotation.Rotation;
 import tc.oc.pgm.rotation.RotationManager;
 import tc.oc.pgm.util.PrettyPaginatedResult;
@@ -25,12 +25,12 @@ public class RotationCommands {
   public static void rotation(
       Audience audience,
       CommandSender sender,
-      MatchManager matchManager,
+      MapOrder mapOrder,
       @Default("1") int page,
       @Switch('r') String rotationName)
       throws CommandException {
 
-    RotationManager rotationManager = getRotationManager(sender, matchManager);
+    RotationManager rotationManager = getRotationManager(sender, mapOrder);
     Rotation rotation =
         rotationName == null
             ? rotationManager.getActiveRotation()
@@ -41,7 +41,7 @@ public class RotationCommands {
           ChatColor.RED + AllTranslations.get().translate("command.rotation.noRotation", sender));
       return;
     }
-    List<PGMMap> maps = rotation.getMaps();
+    List<MapInfo> maps = rotation.getMaps();
 
     int resultsPerPage = 8;
     int pages = (maps.size() + resultsPerPage - 1) / resultsPerPage;
@@ -70,15 +70,15 @@ public class RotationCommands {
             + ") "
             + ChatColor.translateAlternateColorCodes('&', "&9&m-----------");
 
-    new PrettyPaginatedResult<PGMMap>(listHeader, resultsPerPage) {
+    new PrettyPaginatedResult<MapInfo>(listHeader, resultsPerPage) {
       @Override
-      public String format(PGMMap map, int index) {
+      public String format(MapInfo map, int index) {
         index++;
         String indexString =
             rotation.getNextPosition() == index
                 ? ChatColor.DARK_AQUA.toString() + index
                 : String.valueOf(index);
-        return (indexString) + ". " + ChatColor.RESET + map.getInfo().getShortDescription(sender);
+        return (indexString) + ". " + ChatColor.RESET + map.getDescription();
       }
     }.display(audience, maps, page);
   }
@@ -88,10 +88,10 @@ public class RotationCommands {
       desc = "Shows all the existing rotations.",
       help = "Shows all the existing rotations and their trigger player counts.")
   public static void rotations(
-      Audience audience, CommandSender sender, MatchManager matchManager, @Default("1") int page)
+      Audience audience, CommandSender sender, MapOrder mapOrder, @Default("1") int page)
       throws CommandException {
 
-    RotationManager rotationManager = getRotationManager(sender, matchManager);
+    RotationManager rotationManager = getRotationManager(sender, mapOrder);
 
     List<Rotation> rotations = rotationManager.getRotations();
     if (rotations.isEmpty()) {
@@ -149,8 +149,7 @@ public class RotationCommands {
       desc = "Skips one or more maps from the current rotation.",
       usage = "[positions]",
       perms = Permissions.SETNEXT)
-  public static void skip(
-      CommandSender sender, MatchManager matchManager, @Default("1") int positions)
+  public static void skip(CommandSender sender, MapOrder mapOrder, @Default("1") int positions)
       throws CommandException {
 
     if (positions < 0) {
@@ -160,7 +159,7 @@ public class RotationCommands {
       return;
     }
 
-    RotationManager rotationManager = getRotationManager(sender, matchManager);
+    RotationManager rotationManager = getRotationManager(sender, mapOrder);
 
     rotationManager.getActiveRotation().advance(positions);
     rotationManager.saveRotations();
@@ -184,10 +183,9 @@ public class RotationCommands {
                     (ChatColor.AQUA.toString() + positions + ChatColor.GREEN)));
   }
 
-  private static RotationManager getRotationManager(CommandSender sender, MatchManager matchManager)
+  private static RotationManager getRotationManager(CommandSender sender, MapOrder mapOrder)
       throws CommandException {
-    if (matchManager.getMapOrder() instanceof RotationManager)
-      return (RotationManager) matchManager.getMapOrder();
+    if (mapOrder instanceof RotationManager) return (RotationManager) mapOrder;
 
     throw new CommandException(
         AllTranslations.get().translate("command.rotation.rotationsDisabled", sender));

@@ -3,22 +3,22 @@ package tc.oc.pgm.rotation;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import org.bukkit.configuration.ConfigurationSection;
 import tc.oc.pgm.api.PGM;
-import tc.oc.pgm.map.MapLibrary;
-import tc.oc.pgm.map.PGMMap;
+import tc.oc.pgm.api.map.MapContext;
+import tc.oc.pgm.api.map.MapInfo;
+import tc.oc.pgm.api.map.MapLibrary;
 
-/** Rotation of maps, a type of {@link PGMMapOrder} */
-public class Rotation implements PGMMapOrder, Comparable<Rotation> {
+/** Rotation of maps, a type of {@link MapOrder} */
+public class Rotation implements MapOrder, Comparable<Rotation> {
   private final RotationManager manager;
   private final ConfigurationSection configSection;
 
   private final String name;
   private final boolean enabled;
-  private final List<PGMMap> maps;
+  private final List<MapInfo> maps;
   private final int players;
 
   private int position;
@@ -31,12 +31,12 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
     this.players = configSection.getInt("players");
 
     MapLibrary library = PGM.get().getMapLibrary();
-    List<PGMMap> mapList =
+    List<MapInfo> mapList =
         configSection.getStringList("maps").stream()
             .map(
                 mapName -> {
-                  Optional<PGMMap> optMap = library.getMapByNameOrId(mapName);
-                  if (optMap.isPresent()) return optMap.get();
+                  MapContext optMap = library.getMap(mapName);
+                  if (optMap != null) return optMap.getInfo();
                   PGM.get()
                       .getLogger()
                       .warning(
@@ -51,8 +51,8 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
             .collect(Collectors.toList());
     this.maps = Collections.unmodifiableList(mapList);
 
-    Optional<PGMMap> nextMap = library.getMapByNameOrId(configSection.getString("next_map"));
-    if (nextMap.isPresent()) this.position = getMapPosition(nextMap.get());
+    MapContext nextMap = library.getMap(configSection.getString("next_map"));
+    if (nextMap != null) this.position = getMapPosition(nextMap.getInfo());
     else {
       PGM.get()
           .getLogger()
@@ -70,7 +70,7 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
     return enabled;
   }
 
-  public List<PGMMap> getMaps() {
+  public List<MapInfo> getMaps() {
     return Collections.unmodifiableList(maps);
   }
 
@@ -90,10 +90,10 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
     return (position + 1) % maps.size();
   }
 
-  private int getMapPosition(PGMMap map) {
+  private int getMapPosition(MapInfo map) {
     int count = 0;
 
-    for (PGMMap pgmMap : maps) {
+    for (MapInfo pgmMap : maps) {
       if (pgmMap.getName().equals(map.getName())) break;
       count++;
     }
@@ -101,7 +101,7 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
     return count;
   }
 
-  private PGMMap getMapInPosition(int position) {
+  private MapInfo getMapInPosition(int position) {
     if (position < 0 || position >= maps.size()) {
       PGM.get()
           .getLogger()
@@ -129,19 +129,19 @@ public class Rotation implements PGMMapOrder, Comparable<Rotation> {
   }
 
   @Override
-  public PGMMap popNextMap() {
-    PGMMap nextMap = getMapInPosition(position);
+  public MapInfo popNextMap() {
+    MapInfo nextMap = getMapInPosition(position);
     advance();
     return nextMap;
   }
 
   @Override
-  public PGMMap getNextMap() {
+  public MapInfo getNextMap() {
     return maps.get(position);
   }
 
   @Override
-  public void setNextMap(PGMMap map) {}
+  public void setNextMap(MapInfo map) {}
 
   @Override
   public int compareTo(Rotation o) {

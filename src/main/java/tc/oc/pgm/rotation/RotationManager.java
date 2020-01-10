@@ -2,7 +2,8 @@ package tc.oc.pgm.rotation;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -13,14 +14,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import tc.oc.pgm.AllTranslations;
 import tc.oc.pgm.api.PGM;
+import tc.oc.pgm.api.map.MapInfo;
 import tc.oc.pgm.api.match.Match;
-import tc.oc.pgm.map.PGMMap;
 
 /**
  * Manages all the existing {@link Rotation}s, as for maintaining their order, and updating the one
  * {@link PGM} will use after every match depending on the player count (Dynamic Rotations)
  */
-public class RotationManager implements PGMMapOrder {
+public class RotationManager implements MapOrder {
 
   private Logger logger;
 
@@ -28,8 +29,8 @@ public class RotationManager implements PGMMapOrder {
   private FileConfiguration rotationsFileConfiguration;
   private List<Rotation> rotations = new ArrayList<>();
   private Rotation activeRotation;
-  /** When a {@link PGMMap} is manually set next, it overrides the rotation order * */
-  private PGMMap overriderMap;
+  /** When a {@link MapInfo} is manually set next, it overrides the rotation order * */
+  private MapInfo overriderMap;
 
   public RotationManager(Logger logger, File rotationsFile) {
     this.rotationsFile = rotationsFile;
@@ -139,9 +140,9 @@ public class RotationManager implements PGMMapOrder {
   }
 
   @Override
-  public PGMMap popNextMap() {
+  public MapInfo popNextMap() {
     if (overriderMap != null) {
-      PGMMap overrider = overriderMap;
+      MapInfo overrider = overriderMap;
       overriderMap = null;
       return overrider;
     }
@@ -149,14 +150,14 @@ public class RotationManager implements PGMMapOrder {
   }
 
   @Override
-  public PGMMap getNextMap() {
+  public MapInfo getNextMap() {
     if (overriderMap != null) return overriderMap;
     if (activeRotation != null) return activeRotation.getNextMap();
     return null;
   }
 
   @Override
-  public void setNextMap(PGMMap map) {
+  public void setNextMap(MapInfo map) {
     overriderMap = map;
   }
 }

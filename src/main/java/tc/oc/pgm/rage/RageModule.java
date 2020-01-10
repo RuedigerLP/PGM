@@ -1,20 +1,20 @@
 package tc.oc.pgm.rage;
 
+import com.google.common.collect.ImmutableList;
+import java.util.Collection;
 import java.util.logging.Logger;
 import org.jdom2.Document;
 import tc.oc.component.Component;
 import tc.oc.component.types.PersonalizedTranslatable;
+import tc.oc.pgm.api.map.MapContext;
+import tc.oc.pgm.api.map.MapModule;
+import tc.oc.pgm.api.map.factory.MapModuleFactory;
 import tc.oc.pgm.api.match.Match;
+import tc.oc.pgm.api.match.MatchModule;
 import tc.oc.pgm.blitz.BlitzModule;
-import tc.oc.pgm.map.MapModule;
-import tc.oc.pgm.map.MapModuleContext;
-import tc.oc.pgm.match.MatchModule;
-import tc.oc.pgm.module.ModuleDescription;
+import tc.oc.xml.InvalidXMLException;
 
-@ModuleDescription(
-    name = "Rage",
-    follows = {BlitzModule.class})
-public class RageModule extends MapModule {
+public class RageModule implements MapModule {
 
   private final boolean blitz;
 
@@ -24,26 +24,31 @@ public class RageModule extends MapModule {
 
   private static final Component GAME = new PersonalizedTranslatable("match.scoreboard.rage.title");
 
-  @Override
-  public Component getGame(MapModuleContext context) {
+  // FIXME: custom sidebar
+  /*@Override
+  public Component getGame(MapContext context) {
     return blitz ? GAME : null;
-  }
+  }*/
 
   @Override
   public MatchModule createMatchModule(Match match) {
     return new RageMatchModule(match);
   }
 
-  // ---------------------
-  // ---- XML Parsing ----
-  // ---------------------
+  public static class Factory implements MapModuleFactory<RageModule> {
+    @Override
+    public Collection<Class<? extends MapModule>> getWeakDependencies() {
+      return ImmutableList.of(BlitzModule.class);
+    }
 
-  public static RageModule parse(MapModuleContext context, Logger logger, Document doc) {
-
-    if (doc.getRootElement().getChild("rage") != null) {
-      return new RageModule(context.hasModule(BlitzModule.class));
-    } else {
-      return null;
+    @Override
+    public RageModule parse(MapContext context, Logger logger, Document doc)
+        throws InvalidXMLException {
+      if (doc.getRootElement().getChild("rage") != null) {
+        return new RageModule(context.hasModule(BlitzModule.class));
+      } else {
+        return null;
+      }
     }
   }
 }
