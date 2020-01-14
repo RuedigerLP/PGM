@@ -1,21 +1,10 @@
 package tc.oc.pgm;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import app.ashcon.intake.bukkit.BukkitIntake;
 import app.ashcon.intake.bukkit.graph.BasicBukkitCommandGraph;
 import app.ashcon.intake.fluent.DispatcherNode;
 import app.ashcon.intake.parametric.AbstractModule;
 import app.ashcon.intake.parametric.provider.EnumProvider;
-import java.io.File;
-import java.sql.SQLException;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.Nullable;
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -40,7 +29,7 @@ import tc.oc.pgm.api.map.MapLibrary;
 import tc.oc.pgm.api.match.Match;
 import tc.oc.pgm.api.match.MatchManager;
 import tc.oc.pgm.api.match.factory.MatchFactory;
-import tc.oc.pgm.api.module.ModuleRegistry;
+import tc.oc.pgm.api.Modules;
 import tc.oc.pgm.api.player.MatchPlayer;
 import tc.oc.pgm.api.setting.SettingKey;
 import tc.oc.pgm.api.setting.SettingValue;
@@ -93,10 +82,22 @@ import tc.oc.pgm.rotation.RandomMapOrder;
 import tc.oc.pgm.tablist.MatchTabManager;
 import tc.oc.pgm.teams.TeamMatchModule;
 
+import javax.annotation.Nullable;
+import java.io.File;
+import java.sql.SQLException;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public final class PGMImpl extends JavaPlugin implements PGM, IdentityProvider {
 
   private Logger gameLogger;
-  private ModuleRegistry moduleRegistry;
+  private Modules moduleRegistry;
   private Datastore datastore;
   private Datastore datastoreCache;
   private MapLibrary mapLibrary;
@@ -151,22 +152,31 @@ public final class PGMImpl extends JavaPlugin implements PGM, IdentityProvider {
     gameLogger.setUseParentHandlers(false);
     gameLogger.setParent(logger);
 
-    mapLibrary = new MapLibraryImpl(gameLogger, null);
+    moduleRegistry = new ModulesImpl();
+
+    // FIXME: Use gameLogger
+    mapLibrary = new MapLibraryImpl(logger, Config.Maps.sources());
     try {
-      mapLibrary.loadMaps(false).get(15, TimeUnit.SECONDS);
+      mapLibrary.loadNewMaps(false).get(15, TimeUnit.SECONDS);
     } catch (InterruptedException | TimeoutException e) {
-      logger.log(Level.SEVERE, "Could not load at least 1 map before timeout", e);
-      return;
+      if (mapLibrary.getMaps().isEmpty()) {
+        logger.log(Level.SEVERE, "Could not load at least 1 map before timeout");
+        return;
+      }
     } catch (ExecutionException e) {
-      logger.log(Level.SEVERE, "Could not load any maps", e.getCause());
-      return;
+      if (mapLibrary.getMaps().isEmpty()) {
+        logger.log(Level.SEVERE, "Could not load any maps", e.getCause());
+        return;
+      } else {
+        logger.log(Level.WARNING, "Could not load some maps", e.getCause());
+      }
     }
 
     final MapContext map;
     try {
       map = checkNotNull(mapLibrary.getMaps().iterator().next());
     } catch (Throwable t) {
-      logger.log(Level.SEVERE, "Could not load any maps", t);
+      logger.log(Level.SEVERE, "Could not load at least 1 map after timeout");
       return;
     }
 
@@ -242,7 +252,7 @@ public final class PGMImpl extends JavaPlugin implements PGM, IdentityProvider {
   }
 
   @Override
-  public ModuleRegistry getModuleRegistry() {
+  public Modules getModuleRegistry() {
     return moduleRegistry;
   }
 

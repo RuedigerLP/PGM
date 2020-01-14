@@ -36,7 +36,7 @@ public class Rotation implements MapOrder, Comparable<Rotation> {
             .map(
                 mapName -> {
                   MapContext optMap = library.getMap(mapName);
-                  if (optMap != null) return optMap.getInfo();
+                  if (optMap != null) return optMap;
                   PGM.get()
                       .getLogger()
                       .warning(
@@ -52,7 +52,7 @@ public class Rotation implements MapOrder, Comparable<Rotation> {
     this.maps = Collections.unmodifiableList(mapList);
 
     MapContext nextMap = library.getMap(configSection.getString("next_map"));
-    if (nextMap != null) this.position = getMapPosition(nextMap.getInfo());
+    if (nextMap != null) this.position = getMapPosition(nextMap);
     else {
       PGM.get()
           .getLogger()
